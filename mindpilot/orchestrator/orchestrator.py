@@ -156,7 +156,7 @@ class MindPilotOrchestrator:
         def _do_planning():
             self._send_request("PlanningAgent", "planning", {"query": query})
             p = self.planner.run(query)
-            self._send_response("PlanningAgent", "planning", {"plan_id": plan.plan_id, "tasks": len(plan.tasks)})
+            self._send_response("PlanningAgent", "planning", {"plan_id": p.plan_id, "tasks": len(p.tasks)})
             self.planner.print_plan(p)
             return p
 
@@ -287,7 +287,7 @@ class MindPilotOrchestrator:
         }
         code_result = self._run_step(
             "code",
-            lambda: self.code_agent.run(code_desc, context=context),
+            lambda: self.code_agent.run(code_desc),
             code_fallback,
         )
 
@@ -302,7 +302,7 @@ class MindPilotOrchestrator:
                 self.logger.info("Orchestrator", "User requested code retry")
                 code_result = self._run_step(
                     "code",
-                    lambda: self.code_agent.run(code_desc, context=context),
+                    lambda: self.code_agent.run(code_desc),
                     code_fallback,
                 )
             if review["action"] == "skip":
