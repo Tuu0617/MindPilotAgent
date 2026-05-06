@@ -304,7 +304,8 @@ class EvaluationAgent:
 
     # ── 实验设计（新增）─────────────────────────────────────
     def design_experiment(self, query: str, literature_result: dict,
-                          research_path: str = "") -> dict:
+                          research_path: str = "",
+                          task_description: str = "") -> dict:
         """
         基于文献综述生成完整实验设计方案。
         返回包含研究目标、方法、评估指标、对照组的结构化方案。
@@ -361,12 +362,14 @@ sections 要求：
 - body 应直接写成可放入学术报告的正文，不要只写提纲。"""
 
             path_part = f"推荐研究路径：\n{research_path}\n\n" if research_path else ""
+            task_part = f"规划任务描述：\n{task_description}\n\n" if task_description else ""
             prompt = (
                 "返回字段：research_hypothesis, dataset, baselines, metrics, procedure, "
                 "expected_results, full_description。\n"
                 "其中 baselines、metrics、procedure 必须为数组。\n\n"
                 f"研究问题：{query}\n\n"
                 f"{path_part}"
+                f"{task_part}"
                 f"相关文献方法参考：\n{methods_ref}\n\n"
                 "请设计完整的实验方案："
             )
@@ -387,6 +390,7 @@ sections 要求：
             # analysis, and final report generation.
             result = {
                 "research_path":       research_path,
+                "task_description":    task_description,
                 "research_hypothesis": data.get("research_hypothesis", ""),
                 "objectives":          data.get("objectives", []),
                 "dataset":             data.get("dataset", ""),
