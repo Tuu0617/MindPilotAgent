@@ -705,13 +705,18 @@ sections 要求：
             )
 
         experiment_consistency = 0.85 if exp_design else 0.55
+        experiment_text = "\n".join(
+            self._safe_text(section.get("body", ""))
+            for section in report_content.get("sections", [])
+            if self._safe_text(section.get("heading", "")).startswith(("三、", "3."))
+        )
         experiment_checks = [
-            ("3.1", exp_design.get("research_hypothesis", ""), "research hypothesis"),
-            ("3.2", exp_design.get("metrics", []), "metrics"),
-            ("3.3", exp_design.get("baselines", []), "baselines"),
+            (exp_design.get("research_hypothesis", ""), "research hypothesis"),
+            (exp_design.get("metrics", []), "metrics"),
+            (exp_design.get("baselines", []), "baselines"),
         ]
-        for prefix, expected, label in experiment_checks:
-            body = self._section_body(report_content, prefix)
+        for expected, label in experiment_checks:
+            body = experiment_text
             expected_items = self._list_values(expected)
             if expected_items:
                 matched = sum(1 for item in expected_items if item.lower() in body.lower())
@@ -722,7 +727,7 @@ sections 要求：
                         {
                             "dimension": "experiment_consistency",
                             "severity": "hard",
-                            "message": f"section {prefix} does not match upstream {label}",
+                            "message": f"experiment section does not match upstream {label}",
                         }
                     )
             elif body and not self._contains_any(body, ["未提供", "not provided", "missing"]):
@@ -731,7 +736,7 @@ sections 要求：
                     {
                         "dimension": "experiment_consistency",
                         "severity": "soft",
-                        "message": f"section {prefix} fills in {label} even though upstream design is missing",
+                        "message": f"experiment section fills in {label} even though upstream design is missing",
                     }
                 )
 
@@ -1473,34 +1478,40 @@ sections 要求：
 
         title = f"MindPilot 科研报告：{query}"
         exp_design = outputs.get("experiment_design", {}) or {}
+        exp_sections = self._normalize_experiment_sections(exp_design.get("sections", []))
+        if not exp_sections:
+            exp_sections = [
+                {
+                    "heading": "3.1 实验假设与目标",
+                    "body": self._format_experiment_subsection(
+                        exp_design.get("research_hypothesis", ""),
+                        "实验假设与目标",
+                    ),
+                },
+                {
+                    "heading": "3.2 评估指标",
+                    "body": self._format_experiment_subsection(
+                        exp_design.get("metrics", []),
+                        "评估指标",
+                    ),
+                },
+                {
+                    "heading": "3.3 基线方法",
+                    "body": self._format_experiment_subsection(
+                        exp_design.get("baselines", []),
+                        "基线方法",
+                    ),
+                },
+            ]
+
         sections = [
             {"heading": "一、研究背景与问题陈述", "body": background, "level": 1},
             {"heading": "二、文献综述", "body": literature, "level": 1},
-            {"heading": "三、实验设计与方法设计", "body": experiment_description, "level": 1},
-            {
-                "heading": "3.1 实验假设与目标",
-                "body": self._format_experiment_subsection(
-                    exp_design.get("research_hypothesis", ""),
-                    "实验假设与目标",
-                ),
-                "level": 2,
-            },
-            {
-                "heading": "3.2 评估指标",
-                "body": self._format_experiment_subsection(
-                    exp_design.get("metrics", []),
-                    "评估指标",
-                ),
-                "level": 2,
-            },
-            {
-                "heading": "3.3 基线方法",
-                "body": self._format_experiment_subsection(
-                    exp_design.get("baselines", []),
-                    "基线方法",
-                ),
-                "level": 2,
-            },
+            {"heading": "三、实验设计与方法论", "body": experiment_description, "level": 1},
+            *[
+                {"heading": sec["heading"], "body": sec["body"], "level": 2}
+                for sec in exp_sections
+            ],
             {"heading": "四、核心方法实现", "body": method_description, "level": 1},
             {"heading": "五、实验结果与分析", "body": result_description, "level": 1},
             {"heading": "六、结论与展望", "body": conclusion, "level": 1},
